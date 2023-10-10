@@ -1,0 +1,6 @@
+{
+  "name": "Dataform_git_CloudEditor",
+  "dependencies": {
+    "@dataform/core": "2.4.2"
+  }
+}
