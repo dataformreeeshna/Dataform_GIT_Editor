@@ -1,0 +1,53 @@
+CREATE OR REPLACE PROCEDURE  `celestial-feat-400905`.spark_transformation_in_big_qery.DataformCTE_Result_SP()
+BEGIN
+CREATE OR REPLACE TABLE celestial-feat-400905.spark_transformation_in_big_qery.DataformOutput_Result
+(
+  current_timetsamp TIMESTAMP,
+  current_date DATE,
+  CustomerID STRING,
+  total_freight FLOAT64,
+  total_amount FLOAT64,
+  max_amount FLOAT64,
+  min_amount FLOAT64,
+  avg_amount FLOAT64,
+  total_count INT64,
+  CompanyName STRING,
+  ContactTitle STRING,
+  Country STRING,
+  Region STRING,
+  Phone STRING,
+  for_lit_function INT64
+);
+insert into celestial-feat-400905.spark_transformation_in_big_qery.DataformOutput_Result(
+WITH OrderDetails AS (
+    SELECT o.CustomerID ,
+    ROUND(SUM(o.Freight), 2) as total_freight,
+  ROUND(SUM(od.UnitPrice * od.Quantity), 2) as total_amount,
+  ROUND(MAX(od.UnitPrice * od.Quantity), 2) as max_amount,
+  ROUND(MIN(od.UnitPrice * od.Quantity), 2) as min_amount,
+  ROUND(AVG(od.UnitPrice * od.Quantity), 2) as avg_amount,
+  COUNT(*) as total_count
+    FROM `celestial-feat-400905`.spark_transformation_in_big_qery.orders o
+    JOIN `celestial-feat-400905`.spark_transformation_in_big_qery.order_details od
+    ON o.OrderID = od.OrderID
+    GROUP BY o.CustomerID
+),
+CustomerDetails AS (
+    SELECT CustomerID,UPPER(CompanyName) as CompanyName,
+    CONCAT(ContactName, ' - ', ContactTitle) as ContactTitle,TRIM(REPLACE(SUBSTR(Phone, 2), ')', '-')) as    
+    Phone,Country,LOWER(IFNULL(Region, 'not specified')) as Region
+    FROM `celestial-feat-400905`.spark_transformation_in_big_qery.customer
+)
+SELECT  
+    CURRENT_TIMESTAMP() as current_timestamp, CURRENT_DATE() as current_date,c.CustomerID,ood.total_freight, ood.total_amount,
+    ood.max_amount,ood.min_amount,ood.avg_amount,ood.total_count,c.CompanyName,c.ContactTitle,c.Country,
+    c.Region,c.Phone,CAST('1' as INT64) as for_lit_function
+FROM OrderDetails ood
+JOIN CustomerDetails c ON ood.CustomerID = c.CustomerID
+WHERE c.Country NOT IN ('USA')
+  --AND c.Phone NOT LIKE '5%'
+ORDER BY c.CustomerID);
+END;
+
+
+CALL `celestial-feat-400905`.spark_transformation_in_big_qery.DataformCTE_Result_SP()
